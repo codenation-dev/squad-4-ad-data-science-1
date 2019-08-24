@@ -1,8 +1,38 @@
 import pandas as pd
 import numpy as np
 
-columns_with_duplicated_info = ["idade_emp_cat", "de_faixa_faturamento_estimado", "de_faixa_faturamento_estimado_grupo"]
-columns_with_treated_info = ["dt_situacao"]
+import mapping_dicts
+from encoding_scaling import dummies, numerical_scaler
+
+
+
+def drop_high_null_columns(df, threshold = .6):
+    """Drops columns with a high number of nulls
+    
+    Arguments:
+        df {DataFrame} -- Input DataFrame
+    
+    Keyword Arguments:
+        threshold {int} -- Threshold for dropping columns null % with less than threshold(default: {1})
+    
+    Returns:
+        DataFrame -- DataFrame with dropped columns
+    """
+    return df.loc[:, df.isnull().mean() < threshold]
+
+def drop_rows_with_nulls(df, cols):
+    """Drops rows with a nulls for given columns
+    
+    Arguments:
+        df {DataFrame} -- Input DataFrame
+        cols {list} -- String list for all rows to be dropped
+    
+    Returns:
+        DataFrame -- DataFrame with dropped rows
+    """
+    return df.dropna(axis = 0, how = "any", subset = cols)
+ 
+
 
 def drop_low_significancy_columns(df, threshold = 1):
     """Drops columns with low significancy - a small number of unique values
@@ -11,15 +41,14 @@ def drop_low_significancy_columns(df, threshold = 1):
         df {DataFrame} -- Input DataFrame
     
     Keyword Arguments:
-        threshold {int} -- Threshold for dropping columns with equal or less than (default: {1})
+        threshold {int} -- Threshold for dropping columns with nunique equal or less than threshold (default: {1})
     
     Returns:
         DataFrame -- DataFrame with dropped columns
     """
-    total_shape =
     return df.drop(columns = df.columns[df.nunique() <= threshold])
 
-def drop_columns(df, col_list = columns_with_duplicated_info):
+def drop_columns(df, col_list):
     """Drop List of Given Columns
     
     Arguments:
@@ -31,7 +60,7 @@ def drop_columns(df, col_list = columns_with_duplicated_info):
     Returns:
         DataFrame -- Returns the same Dataframe without those rows
     """
-    return df.drop(columns = columns_with_duplicated_info)
+    return df.drop(columns = col_list)
 
 
 def fill_faturamento_estimado(df):
@@ -65,20 +94,9 @@ def fill_with_zero(df, pattern, regexp = False):
     return df
 
 
-def fill_with_mode(df, col):
-    """Fills with mode of the given column
-    
-    Arguments:
-        df {DataFrame} -- Pandas DataFrame
-        col {str} -- name of the column
-    
-    Returns:
-        DataFrame -- DataFrame with given column filled with its mode
-    """
-    df.loc[:,col].fillna(df[col].mode()[0], inplace = True)
-    return df
 
-def treat_dt(df, col):
+
+def treat_datetime(df, col):
     """Treats date or datetime columns to machine learning ready vals
     
     Arguments:
@@ -94,9 +112,37 @@ def treat_dt(df, col):
     return df
 
 def map_dataframe(df, mapping_dict):
-    pass
+    for k, v in mapping_dict.items():
+        df[k] = df[k].map(v)
+    return df
 
+def fill_by_dict(df, filling_dict):
+    for k, v in filling_dict.items():
+        method = v["method"]
+        if method == "constant":
+            df[k].fillna(method = None, value = v["value"], inplace = True)
+        elif method == "mode":
+            df[k].fillna(method = None, value = df[k].mode()[0], inplace = True)
+        elif method == "mean":
+            df[k].fillna(df[k].mean(), inplace = True)
+        elif method == "median":
+            df[k].fillna(df[k].median(), inplace = True)
+    return df
 
+def get_census_income_agg(df):
+    return df.groupby(["nm_micro_regiao" ,"nm_meso_regiao"])[["empsetorcensitariofaixarendapopulacao"]].mean()
+
+def generate_additional_label(df, col_list):
+    for col in col_list:
+        df[col+"_label"] = 0
+        df.loc[~ df[col].isnull(), col+"_label"] = 1
+        df[col+"_label"] = df[col+"_label"].astype("bool")
+    return df
+
+def columns_to_boolean(df, col_list):
+    for col in col_list:
+        df[col] = df[col].astype("bool")
+    return df
 
 def main_pipeline(df):
     """Runs extensively all dataframe formatting pipeline
@@ -107,19 +153,66 @@ def main_pipeline(df):
     Returns:
         DataFrame -- Full DataFrame with features treated, nulls formatted and so and on
     """
-
-    df = drop_columns(df)
+    
+    df = fill_with_zero(df, "(funcionarios|veiculo)", True)
+    df = fill_by_dict(df, mapping_dicts.FILL_BINARY_N_CONTINUOUS)
     df = fill_faturamento_estimado(df)
-    df = fill_with_zero(df, "(funcionarios|veiculo|idade)", True)
-    df = fill_with_mode(df, "dt_situacao")
-    df = treat_dt(df, "dt_situacao")
+    df = treat_datetime(df, "dt_situacao")
+    df = generate_additional_label(df, mapping_dicts.COLUMNS_WITH_ADDITIONAL_LABEL_FOR_NULL)
+    df = map_dataframe(df, mapping_dicts.MAP_TO_NUMERICAL_ENCODING)
+
+    #fill empsetorcensitariofaixarendapopulacao by segment
+    emp_summary = get_census_income_agg(df)
+    df.loc[df.empsetorcensitariofaixarendapopulacao.isnull(), ["empsetorcensitariofaixarendapopulacao"]] = df.loc[df.empsetorcensitariofaixarendapopulacao.isnull()].apply(lambda x: emp_summary.loc[x["nm_micro_regiao"], x["nm_meso_regiao"]][0], axis = 1)
+
+    #drop
+    df = drop_columns(df, col_list = mapping_dicts.COLUMNS_WITH_DUPLICATED_INFO)
+    df = drop_columns(df, col_list = mapping_dicts.COLUMNS_WITH_TREATED_INFO)
     df = drop_low_significancy_columns(df)
+    df = drop_high_null_columns(df)
+    df = drop_rows_with_nulls(df, cols = ["nm_segmento"])
+
+
+
+    #data format
+    df = columns_to_boolean(df, mapping_dicts.COLUMNS_TO_BOOL)
+    df = dummies(df, 'first')
+    df = numerical_scaler(df, mapping_dicts.NUMERICAL_COLUMNS_TO_SCALE)
+
     return df
 
+portifolio_id = {1: r"../workspace/data/estaticos_portfolio1.csv",
+                 2: r"../workspace/data/estaticos_portfolio2.csv",
+                 3: r"../workspace/data/estaticos_portfolio3.csv",}
 
-if __name__ == "__main__":
+def fetch_market(id_portifolio):
     df = pd.read_csv("../workspace/data/estaticos_market.csv", index_col = 0)
+    df.set_index("id", inplace = True)
 
     df = main_pipeline(df)
-    print(df.head())
-    print((df.isnull().sum()>0).sum())
+
+    df["cliente_flag"] = 0
+    df_portfolio = pd.read_csv(portifolio_id[id_portifolio])["id"]
+
+    df.loc[df.index.isin(df_portfolio.tolist()), "cliente_flag"] = 1
+
+    return df
+
+if __name__ == "__main__":
+    # df = pd.read_csv("../workspace/data/estaticos_market.csv", index_col = 0)
+    # df.set_index("id", inplace = True)
+
+    # df = main_pipeline(df)
+    # print(df.head())
+    # null_cols = (df.isnull().sum()>0)
+    # print(df.loc[:,null_cols].columns)
+    # print(df.info(memory_usage = "deep"))
+
+    df = fetch_market(1)
+    print(df.info())
+
+    df = fetch_market(2)
+    print(df.info())
+
+    df = fetch_market(3)
+    print(df.info())
