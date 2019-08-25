@@ -172,4 +172,4 @@ recommendation_ids = recommendation['id']
 top25_recommendations_ids = recommendation_ids.head(25)
 rec_sys_output = recommendation[['id','prob']]
 path = r'../recommender_system_leads/predicts/'
-rec_sys_output.to_csv(path+'rec_port_diego.csv', index=False)
+rec_sys_output.to_csv(path+'CL_rank_02.csv', index=False)
