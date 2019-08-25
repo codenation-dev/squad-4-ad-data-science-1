@@ -1,9 +1,10 @@
+print("==> Aggregating Rankings")
 import numpy as np
 import matplotlib
 import pandas as pd
 
 # Runs Recommender models Scripts
-##import recommender_system_class # CLassification script
+import recommender_system_class # CLassification script
 ##import LR_script_NAME # Logistic Regression script
 ##import RF_script_NAME # Random Forest script
 
@@ -58,3 +59,4 @@ def aggregate_rank(quantile_leads = 0.05,
     rec_lead.to_csv(out_rank_name)
 
 aggregate_rank()
+print("==> Done!")
