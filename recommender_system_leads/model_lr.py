@@ -5,6 +5,8 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.decomposition import PCA
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
 import numpy as np
 import fire
 import pandas as pd
@@ -25,7 +27,7 @@ def get_train_test(dataset):
     market_sample = market.sample(portfolio.shape[0])
 
     portfolio_num = portfolio._get_numeric_data()
-    market_num =  market._get_numeric_data()
+    market_num =  market_sample._get_numeric_data()
 
     portfolio_train = pd.concat([portfolio_num, market_num], sort = False)
 
@@ -67,9 +69,19 @@ def train(**kwargs):
     binary into workspace/models directory.
     """
     print("==> TRAINING YOUR MODEL!")
+    x_train, x_test, y_train, y_test = train_test_split(dataset.drop('cliente_flag', axis=1),
+                                                        dataset['cliente_flag'], test_size=0.30,
+                                                        random_state=101, stratify=dataset['cliente_flag'])
+
+    logmodel = LogisticRegression()
+    logmodel.fit(x_train[features], y_train)
+    predictions = logmodel.predict(x_test[features])
 
 
-def metadata(**kwargs):
+    return (logmodel, predictions, y_test)
+
+
+def metadata(predictions_train_ytest,predictions_train):
     """Generate metadata for model governance using testing!
 
     NOTE
@@ -92,10 +104,17 @@ def metadata(**kwargs):
        'source': 'https://archive.ics.uci.edu/ml/datasets/iris'
     }
     """
+
     print("==> TESTING MODEL PERFORMANCE AND GENERATING METADATA")
+    classification = classification_report(predictions_train_ytest, predictions_train)
+    confusion = confusion_matrix(predictions_train_ytest, predictions_train)
+    print(classification)
+    print(confusion)
+    return (classification, confusion)
 
 
-def predict(input_data):
+
+def predict(input_data,logmodel,features):
     """Predict: load the trained model and score input_data
 
     NOTE
@@ -104,6 +123,9 @@ def predict(input_data):
     to do experiments, like predict/input.csv.
     """
     print("==> PREDICT DATASET {}".format(input_data))
+    predictions = logmodel.predict(input_data[features])
+    predictions_prob = logmodel.predict_proba(input_data[features])
+    return (predictions, predictions_prob)
 
 
 # Run all pipeline sequentially
@@ -124,12 +146,9 @@ def cli():
 
 if __name__ == '__main__':
     #cli()
-    #features(market_dir="/home/marcelo/Documents/codenation_squad4/squad-4-ad-data-science-1/analysis/estaticos_market.csv",
-     #        portfolio_dir= "/home/marcelo/Documents/codenation_squad4/squad-4-ad-data-science-1/analysis/estaticos_portfolio1.csv")
+
     portfolio1 = dt.fetch_market(1)
-    portfolio_train, market_test = get_train_test(portfolio1)
+    portfolio_train, market_test = get_train_test(portfolio1, 1)
     feat_importance = get_importance(portfolio_train)
-    print(portfolio_train.shape)
-    print(market_test.shape)
-    print(feat_importance)
-    print('Oi')
+    logmodel, predictions_train, predictions_train_ytest = train(portfolio_train, feat_importance)
+
