@@ -4,7 +4,7 @@ import matplotlib
 import pandas as pd
 
 # Runs Recommender models Scripts
-import recommender_system_class # CLassification script
+##import recommender_system_class # CLassification script
 ##import LR_script_NAME # Logistic Regression script
 ##import RF_script_NAME # Random Forest script
 
