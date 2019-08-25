@@ -5,12 +5,16 @@ Prepare environment:
 $ pip3 install virtualenv
 $ virtualenv venv -p python3
 $ source venv/bin/activate
-$ cd
 
-You need to have in your directory (workspace/data):
-- One csv file named ‘portfolio.csv’
-- One csv file named ‘market.csv’
-- One csv file named ‘dicionário.csv’
+You need to have these files in your directory (workspace/data):
+- ‘estaticos_portfolio1.csv’
+- ‘estaticos_portfolio2.csv’
+- ‘estaticos_portfolio3.csv’
+- ‘estaticos_market.csv’
+- ‘dicionário.csv’
 
-Run:
-python main_cross_recommender.py 
+Link to download above files:
+https://drive.google.com/open?id=18Wb6BLSu7ls6S5z_uu8ob0h-x6n2N14b
+
+To Run:
+python recommender_system_class.py 
