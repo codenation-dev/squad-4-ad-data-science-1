@@ -9,10 +9,10 @@ import pandas as pd
 
 # Ranking aggregate Function:
 def aggregate_rank(quantile_leads = 0.05,
-                   out_rank_name = r'../recommender_system_leads/predicts/ag_rank_portfolio3.csv', # Change name of output
-                   input_rank_01_name = r'../recommender_system_leads/predicts/CL_rank_03.csv', # Change name of input CLassification script
-                   input_rank_02_name = r'../recommender_system_leads/predicts/LR_rank_03.csv', # Change name of input Logistic Regression script
-                   input_rank_03_name = r'../recommender_system_leads/predicts/RF_rank_03.csv'): # Change name of input Random Forest script
+   out_rank_name = r'../recommender_system_leads/predicts/ag_rank_portfolio3.csv', # Change name of output
+   input_rank_01_name = r'../recommender_system_leads/predicts/CL_rank_03.csv', # Change name of input CLassification script
+   input_rank_02_name = r'../recommender_system_leads/predicts/LR_rank_03.csv', # Change name of input Logistic Regression script
+   input_rank_03_name = r'../recommender_system_leads/predicts/RF_rank_03.csv'): # Change name of input Random Forest script
 
     # Read inputs:
     input_rank_01=pd.read_csv(input_rank_01_name)

@@ -22,10 +22,6 @@ https://drive.google.com/open?id=18Wb6BLSu7ls6S5z_uu8ob0h-x6n2N14b
 
 # To Run, change code with portfolio info:
 
-In "recommender_system_class.py":
-- Line 34, insert the id number of portfolio 1, 2 or 3:
-- In line 175 chose the output name:
-
 In "main_ranking.py":
 - Lines 10 to 15, select ranking files to compare and aggregate;
 
