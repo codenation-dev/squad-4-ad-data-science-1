@@ -8,102 +8,50 @@ from sklearn.decomposition import PCA
 import numpy as np
 import fire
 import pandas as pd
-#from recommender_system_leads import config  # noqa
+import sys
+# insert at 1, 0 is the script path (or '' in REPL)
+sys.path.insert(1, '/home/marcelo/Documents/codenation_squad4/squad-4-ad-data-science-1/data_processing/')
+import data_treatment as dt
 
-## Drop Features with number of missing data greater than a threshold
-def drop_na(**kwargs):
-    data = kwargs.get("data")
-    threshold = kwargs.get("threshold")
-
-    row, col = data.shape
-
-    data_na = pd.DataFrame(data.isnull().sum(), columns=["NA"])
-
-    na_feat_list = (data_na[data_na['NA'] > ((row * threshold) / 100)])
-    na_feat_list = na_feat_list.index.values
-
-    data = data.drop(na_feat_list, axis=1)
-
-    return(data)
-
-## Fill NA with mean, Standardize and Normalize dataset
-def apply_pipeline(dataframe):
-    df_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")),
-                                   ("scaler", StandardScaler(copy=True, with_mean=True, with_std=True)),
-                                   ("minmaxscaler", MinMaxScaler(copy=True, feature_range=(0, 1)))])
-
-    pipeline_transformation = df_pipeline.fit_transform(dataframe)
-    data_transformed = pd.DataFrame(pipeline_transformation, columns= dataframe.columns)
-
-    return(data_transformed)
-
-## Fill NA, Standardize and Normalize dataset
-def data_prep(dataframe):
-    data_obj = dataframe[dataframe.select_dtypes(include=['O']).columns].fillna("NA")
-    data_num = dataframe._get_numeric_data()
-    data_num = apply_pipeline(data_num)
-
-    result = pd.concat([data_obj, data_num], axis=1)
-    result = result[dataframe.columns]
-    return (result)
-
-##One hot encode list of categoric features
-def one_hot_encode(dataframe):
-
-    enc = OneHotEncoder()
-
-    de_ramo_one_hot = enc.fit_transform(dataframe['de_ramo'].values.reshape(-1, 1)).toarray()
-    col_list = enc.get_feature_names().tolist()
-    col_list = [col.replace('x0', 'ramo') for col in col_list]
-    de_ramo_df = pd.DataFrame(de_ramo_one_hot, columns=col_list)
-
-    setor_one_hot = enc.fit_transform(dataframe['setor'].values.reshape(-1, 1)).toarray()
-    col_list = enc.get_feature_names().tolist()
-    col_list = [col.replace('x0', 'setor') for col in col_list]
-    setor_df = pd.DataFrame(setor_one_hot, columns= col_list)
-
-    natureza_juridica_macro_one_hot = enc.fit_transform(dataframe['natureza_juridica_macro'].values.reshape(-1, 1)).toarray()
-    col_list = enc.get_feature_names().tolist()
-    col_list = [col.replace('x0', 'jur_macro') for col in col_list]
-    natureza_juridica_macro_df = pd.DataFrame(natureza_juridica_macro_one_hot, columns=col_list)
-
-    de_nivel_atividade_one_hot = enc.fit_transform(dataframe['de_nivel_atividade'].values.reshape(-1, 1)).toarray()
-    col_list = enc.get_feature_names().tolist()
-    col_list = [col.replace('x0', 'nvl_atividade') for col in col_list]
-    de_nivel_atividade_df = pd.DataFrame(de_nivel_atividade_one_hot, columns=col_list)
-
-    de_saude_tributaria_one_hot = enc.fit_transform(dataframe['de_saude_tributaria'].values.reshape(-1, 1)).toarray()
-    col_list = enc.get_feature_names().tolist()
-    col_list = [col.replace('x0', 'saude_trib') for col in col_list]
-    de_saude_tributaria_df = pd.DataFrame(de_saude_tributaria_one_hot, columns=col_list)
-
-    df_transformed = pd.concat([dataframe, de_ramo_df, setor_df, natureza_juridica_macro_df, de_nivel_atividade_df,
-         de_saude_tributaria_df], axis=1, sort=False)
-
-    return(df_transformed)
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
 
 
-def features(**kwargs):
+##Get train and test dataset for pradictions
+def get_train_test(dataset):
+    portfolio = portfolio1[portfolio1['cliente_flag'] == 1]
+    market = portfolio1[portfolio1['cliente_flag'] == 0]
 
-    market_dir = kwargs.get("market_dir")
-    portfolio_dir = kwargs.get("market_dir")
+    market_sample = market.sample(portfolio.shape[0])
 
-    market = pd.read_csv(market_dir)
-    market = drop_na(data=market,threshold=85)
+    portfolio_num = portfolio._get_numeric_data()
+    market_num =  market._get_numeric_data()
 
-    data = pd.read_csv(portfolio_dir)
-    portfolio = market.loc[market['id'].isin(data['id'])]
-    market = market.loc[~market['id'].isin(data['id'])]
+    portfolio_train = pd.concat([portfolio_num, market_num], sort = False)
 
-    portfolio = data_prep(portfolio)
-    market = data_prep(market)
+    portfolio_train = portfolio_train.fillna(0)
+    market_test = market.fillna(0)
 
-    portfolio = one_hot_encode(portfolio)
-    market = one_hot_encode(market)
+    return(portfolio_train, market_test)
 
-    print(market.columns)
-    print(portfolio.columns)
 
+def get_importance(dataset):
+    logreg = LogisticRegression()
+
+    rfe = RFE(logreg, 20)
+    rfe = rfe.fit(dataset.drop('cliente_flag', axis=1), dataset['cliente_flag'])
+
+    rfe_support = rfe.support_
+    print(rfe.ranking_)
+
+    feat_importance = []
+    col_list = dataset.drop('cliente_flag', axis=1).columns.tolist()
+
+    for i in range(0, len(col_list)):
+        if(rfe_support[i]== True):
+            feat_importance.append(col_list[i])
+
+    return(feat_importance)
 
 def train(**kwargs):
     """Function that will run your model, be it a NN, Composite indicator
@@ -176,6 +124,12 @@ def cli():
 
 if __name__ == '__main__':
     #cli()
-    features(market_dir="/home/marcelo/Documents/codenation_squad4/squad-4-ad-data-science-1/analysis/estaticos_market.csv",
-             portfolio_dir= "/home/marcelo/Documents/codenation_squad4/squad-4-ad-data-science-1/analysis/estaticos_portfolio1.csv")
+    #features(market_dir="/home/marcelo/Documents/codenation_squad4/squad-4-ad-data-science-1/analysis/estaticos_market.csv",
+     #        portfolio_dir= "/home/marcelo/Documents/codenation_squad4/squad-4-ad-data-science-1/analysis/estaticos_portfolio1.csv")
+    portfolio1 = dt.fetch_market(1)
+    portfolio_train, market_test = get_train_test(portfolio1)
+    feat_importance = get_importance(portfolio_train)
+    print(portfolio_train.shape)
+    print(market_test.shape)
+    print(feat_importance)
     print('Oi')
