@@ -1,24 +1,17 @@
 ## Essential packages: software dependency
 fire>=0.1.3
 
-## Data analysis
-# pandas
-# numpy
-
-## Dev packages: development enviroment
-# NOTE: mark with #dev to ignore in setup.py
-
-# Testing
-pytest #dev
-pytest-mypy #dev
-pytest-cov #dev
-flake8 #dev
-bandit #dev
-
-# Cloud Storage
-#awscli #dev
-
-## Data analysis
-# jupyter
-# matplotlib
-# seaborn
+cycler==0.10.0
+joblib==0.13.2
+kiwisolver==1.1.0
+matplotlib==3.1.1
+numpy==1.17.0
+pandas==0.25.0
+pyparsing==2.4.2
+python-dateutil==2.8.0
+pytz==2019.2
+scikit-learn==0.21.3
+scipy==1.3.1
+seaborn==0.9.0
+six==1.12.0
+sklearn==0.0
