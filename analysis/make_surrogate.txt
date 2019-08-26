@@ -1,0 +1,9 @@
+﻿def make_surrogate(df,samples):
+    mod_df=pd.DataFrame(columns=df.columns)
+    random.seed(1)
+    seed=np.random.randint(1,10000,size=len(df.columns))
+    count_seed=0
+    for i in df.columns:
+        mod_df[i]=np.array(df[i].sample(n=samples, random_state=seed[count_seed],replace=True))
+        count_seed += 1 
+    return mod_df
