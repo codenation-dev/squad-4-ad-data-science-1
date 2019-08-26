@@ -9,7 +9,7 @@ import pandas as pd
 ##import RF_script_NAME # Random Forest script
 
 # Ranking aggregate Function:
-def aggregate_rank(quantile_leads = 0.05,
+def aggregate_rank(quantile_leads = 0.8,
    out_rank_name = r'../recommender_system_leads/predicts/ag_rank_portfolio3.csv', # Change name of output
    input_rank_01_name = r'../recommender_system_leads/predicts/CL_rank_03.csv', # Change name of input CLassification script
    input_rank_02_name = r'../recommender_system_leads/predicts/LR_rank_03.csv', # Change name of input Logistic Regression script
@@ -56,6 +56,7 @@ def aggregate_rank(quantile_leads = 0.05,
 
     # Complete output features and save as csv file:
     rec_lead=output[output['rank_mean']<=output['rank_mean'].quantile(q=quantile_leads)]
+    rec_lead=rec_lead.head(100)
     rec_lead.to_csv(out_rank_name)
 
 aggregate_rank()
