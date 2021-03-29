@@ -6,7 +6,7 @@ backcall==0.1.0
 bleach==3.1.0
 cffi==1.12.2
 chardet==3.0.4
-cryptography==2.6.1
+cryptography==3.2
 cycler==0.10.0
 decorator==4.4.0
 defusedxml==0.6.0
